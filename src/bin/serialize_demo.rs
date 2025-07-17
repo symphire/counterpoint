@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 fn main() {
     let c2s = ClientToServer::Send(SendMessage {
+        message_seq: 1,
         content: ChatContent {
             conversation_id: ConversationId(Uuid::nil()),
             content: "Hello".to_string(),

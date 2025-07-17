@@ -57,10 +57,19 @@ async fn dispatch(
     message: WithSender<ClientToServer>,
 ) -> Result<()> {
     let sender = message.sender;
-    let content = match message.body {
-        ClientToServer::Send(message) => message.content,
+    let message = match message.body {
+        ClientToServer::Send(message) => message,
         _ => return Ok(()),
     };
+    let content = message.content;
+
+    let ack_message = ServerToClient::ACK(ACK {
+        message_seq: message.message_seq,
+    });
+    let message = serde_json::to_string(&ack_message)?;
+    let client_record = online_users.get(&sender).ok_or(anyhow!("Sender not online: {:?}", sender))?;
+    client_record.to_sender.send(Message::text(message))?;
+
     let recipients = user_service.get_receiver(&sender, &content.conversation_id).await?;
 
     let distribute_message = ServerToClient::Distribute(DistributeMessage {
@@ -154,6 +163,15 @@ async fn receiver(
             Ok(message) => message,
             Err(_) => break,
         };
+        // if message.is_text() {
+        //     warn!("Received a text message from user: {:?}", user_id);
+        // }
+        if message.is_close() {
+            break;
+        }
+        // if message.is_binary() {
+        //     warn!("Received a binary message from user: {:?}", user_id);
+        // }
 
         if let Err(e) = handle_recv_message(&to_sender, &user_id, &to_dispatcher, &message).await {
             warn!("Failed to receive message: {}", e);
@@ -190,10 +208,17 @@ async fn watcher(
     user_id: UserId,
     online_users: Arc<DashMap<UserId, ClientRecord>>,
 ) -> Result<()> {
-    let result = tokio::try_join!(sender_handle, receiver_handle);
+    let _ = tokio::select! {
+        res = sender_handle => {
+            warn!("Sender task ended: {:?}", res);
+        },
+        res = receiver_handle => {
+            warn!("Receiver task ended: {:?}", res);
+        },
+    };
     online_users.remove(&user_id);
     debug!("online_users: {}", online_users.len());
-    result.map_or_else(|e| Err(anyhow!(e)), |_| Ok(()))
+    Ok(())
 }
 
 // endregion
