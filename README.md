@@ -14,7 +14,7 @@ A Rust server.
 ### 1. Run the Server
 
 ```bash
-cargo run --bin server_oxide
+cargo run --bin counterpoint
 ```
 
 ### 2. Try the Basics

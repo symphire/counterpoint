@@ -1,4 +1,4 @@
-use server_oxide::settings::*;
+use counterpoint::settings::*;
 
 fn main() {
     // Load settings from the default location

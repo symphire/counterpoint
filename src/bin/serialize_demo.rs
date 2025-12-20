@@ -1,5 +1,5 @@
-use server_oxide::chat::{ChatContent, ClientToServer, SendMessage};
-use server_oxide::domain::ConversationId;
+use counterpoint::chat::{ChatContent, ClientToServer, SendMessage};
+use counterpoint::domain::ConversationId;
 use uuid::Uuid;
 
 fn main() {

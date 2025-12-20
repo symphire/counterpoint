@@ -1,5 +1,5 @@
 [package]
-name = "server_oxide"
+name = "counterpoint"
 version = "0.1.0"
 edition = "2024"
 

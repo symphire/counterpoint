@@ -1,4 +1,4 @@
-use server_oxide::logger::*;
+use counterpoint::logger::*;
 
 fn main() -> anyhow::Result<()> {
     let logger = Logger::new_bootstrap();

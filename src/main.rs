@@ -1,8 +1,8 @@
 use std::fs;
-use server_oxide::api;
-use server_oxide::logger::*;
-use server_oxide::server::*;
-use server_oxide::settings::*;
+use counterpoint::api;
+use counterpoint::logger::*;
+use counterpoint::server::*;
+use counterpoint::settings::*;
 use warp::Filter;
 
 #[tokio::main]
