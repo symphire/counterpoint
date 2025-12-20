@@ -1,4 +1,4 @@
-#!/usr/bin/bash -x
+#!/bin/bash -x
 
 HOST=127.0.0.1:8443
 API_BASE_URL=https://$HOST/api/v1
