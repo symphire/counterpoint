@@ -1,5 +1,5 @@
 [auth]
-backend = "fake"
+backend = "real"
 
 [captcha]
 backend = "fake"
@@ -13,7 +13,7 @@ key_path = "certs/dev_key.pem"
 address = "127.0.0.1:8443"
 
 [log]
-filter = "debug"
+filter = "debug,sqlx=off,server_oxide=trace"
 
 [user]
-backend = "fake"
+backend = "real"

@@ -2,15 +2,18 @@ use super::error::*;
 use super::handler;
 use crate::auth::*;
 use crate::chat::ChatService;
+use crate::domain::AuthService;
+use crate::domain::UserId;
 use crate::server::*;
 use std::convert::Infallible;
 use std::sync::Arc;
 use warp::{http, reject, Filter};
-use crate::domain::UserId;
+use crate::api::v1::handler::{ConversationHistoryQuery, FriendListQuery};
 
 pub fn routes(
-    server: Server,
+    server: Arc<Server>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    // TODO: need a timeout
     let captcha = warp::get()
         .and(warp::path("captcha"))
         .and(warp::path::end())
@@ -33,19 +36,50 @@ pub fn routes(
         .and(with(server.captcha_service.clone()))
         .and_then(handler::signup);
 
+    let friend_list = warp::get()
+        .and(warp::path("friend_list"))
+        .and(warp::path::end())
+        .and(warp::query::<FriendListQuery>())
+        .and(with_verification(server.auth_service.clone()))
+        .and(with(server.relationship_service.clone()))
+        .and_then(handler::generate_friend_list);
+
+    let add_friend = warp::post()
+        .and(warp::path("add_friend"))
+        .and(warp::path::end())
+        .and(warp::body::json())
+        .and(with_verification(server.auth_service.clone()))
+        .and(with(server.user_service.clone()))
+        .and(with(server.relationship_service.clone()))
+        .and_then(handler::add_friend);
+    
+    let conversation_history = warp::get()
+        .and(warp::path("conversation_history"))
+        .and(warp::path::end())
+        .and(warp::query::<ConversationHistoryQuery>())
+        .and(with_verification(server.auth_service.clone()))
+        .and(with(server.conversation_service.clone()))
+        .and_then(handler::generate_conversation_history);
+
     let chat = warp::get()
         .and(warp::path("chat"))
         .and(warp::path::end())
         .and(with_verification(server.auth_service.clone()))
         .and(warp::ws())
         .and(with(server.chat_service.clone()))
+        .and(with(server.connection_acceptor.clone()))
         .map(
-            |user_id: UserId, ws: warp::ws::Ws, chat_service: Arc<dyn ChatService>| {
-                ws.on_upgrade(|socket| handler::join_chat(socket, user_id, chat_service))
+            |user_id: UserId,
+             ws: warp::ws::Ws,
+             chat_service: Arc<dyn ChatService>,
+             connection_acceptor: Arc<dyn ConnectionAcceptor>| {
+                ws.on_upgrade(move |socket| {
+                    handler::join_chat(socket, user_id, chat_service, connection_acceptor)
+                })
             },
         );
 
-    captcha.or(login).or(signup).or(chat)
+    captcha.or(login).or(signup).or(friend_list).or(add_friend).or(conversation_history).or(chat)
 }
 
 fn with<ServiceType>(
@@ -67,11 +101,11 @@ fn with_verification(
                 let user_id = auth_service
                     .verify_token(token)
                     .await
-                    .map_err(map_auth_error_to_api_error)
+                    .map_err(ApiErrorCode::from)
                     .map_err(reject::custom)?;
                 Ok(user_id)
             } else {
-                Err(reject::custom(ApiError::InvalidToken))
+                Err(reject::custom(ApiErrorCode::InvalidToken))
             }
         }
     })

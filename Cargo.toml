@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = { version = "1.0.98" }
-argon2 = { version = "0.6.0-pre.1" }
+argon2 = { version = "0.5.3" }
 async-trait = { version = "0.1.88" }
 captcha-rs = { version = "0.2.11" }
 chrono = { version = "0.4.41", features = ["serde"] }
@@ -13,11 +13,19 @@ clap = { version = "4.5.39", features = ["derive"] }
 config = { version = "0.15.11" }
 dashmap = { version = "7.0.0-rc2" }
 futures-util = { version = "0.3.31" }
+hex = { version = "0.4.3" }
+hmac = { version = "0.13.0-rc.2" }
 jsonwebtoken = { version = "9.3.1" }
+nanoid = {version = "0.4.0"}
+rdkafka = { version = "0.36", features = ["tokio", "cmake-build"]}
+redis = { version = "0.32", features = ["aio", "connection-manager", "tokio-comp"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140" }
+sha2 = { version = "0.11.0-rc.2" }
+sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio-rustls", "chrono", "uuid"] }
 thiserror = { version = "2.0.12" }
 tokio = { version = "1.45.0", features = ["full"] }
+tokio-util = { version = "0.7.17" }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 uuid = { version = "1.16.0", features = ["v4", "v5", "serde"] }

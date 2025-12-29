@@ -1,4 +1,6 @@
 use std::fs;
+use std::sync::Arc;
+use tokio::signal;
 use counterpoint::api;
 use counterpoint::logger::*;
 use counterpoint::server::*;
@@ -24,18 +26,28 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("TLS key is not a regular file: {:?}", project_settings.http.key_path));
     }
 
-    let server = Server::try_new(&project_settings)?;
+    let server = Arc::new(Server::try_new(&project_settings).await?);
 
     let api_v1 = warp::path("api")
         .and(warp::path("v1"))
-        .and(api::v1::routes(server));
+        .and(api::v1::routes(server.clone()))
+        .recover(api::v1::recover_error);
 
     warp::serve(api_v1)
         .tls()
         .cert_path(project_settings.http.cert_path.clone())
         .key_path(project_settings.http.key_path.clone())
-        .run(address)
+        .bind_with_graceful_shutdown(address, async {
+            signal::ctrl_c().await.expect("Could not register SIGINT");
+        })
+        .1
         .await;
+
+    let shutdown_timeout = std::time::Duration::from_secs(100);
+    match tokio::time::timeout(shutdown_timeout, server.shutdown()).await {
+        Ok(_) => tracing::info!("server shutdown successfully"),
+        Err(_) => tracing::error!("server shutdown timed out"),
+    }
 
     Ok(())
 }

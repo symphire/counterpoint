@@ -19,7 +19,7 @@ pub struct Auth {
 
 #[derive(Debug, Deserialize)]
 pub struct Captcha {
-    pub backend: String,  // "fake" or "redis"
+    pub backend: String,  // "fake" or "real"
 }
 
 #[derive(Debug, Deserialize)]

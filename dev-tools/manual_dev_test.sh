@@ -3,7 +3,7 @@
 HOST=127.0.0.1:8443
 API_BASE_URL=https://$HOST/api/v1
 
-CERT_PATH=../certs/dev_cert.pem
+CERT_PATH=certs/dev_cert.pem
 
 curl "$API_BASE_URL/captcha" --cacert "$CERT_PATH"
 
