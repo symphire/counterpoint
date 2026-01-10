@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\nINSERT INTO conversation_counter (conversation_id, next_offset)\nVALUES (?, 1)\nON DUPLICATE KEY UPDATE next_offset = LAST_INSERT_ID(next_offset + 1)\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "5079158030226ec35e3677bbb6f4eb860e02e362363d813c972748aa823da14c"
+}

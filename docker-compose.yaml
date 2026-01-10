@@ -1,0 +1,103 @@
+services:
+  server:
+    image: counterpoint:server
+    build:
+      context: .
+      target: server
+    # TEMPORARY DEV HACK:
+    # Run server on host network so it can use localhost to access infra
+    network_mode: host
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  infra-demo:
+    image: counterpoint:infra-demo
+    build:
+      context: .
+      target: infra-demo
+    profiles: ["tools"]
+    network_mode: host
+    tty: true
+    stdin_open: true
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  redis:
+    image: docker.io/library/redis:8.4.0-bookworm
+    command: redis-server --requirepass mysecret
+    network_mode: host
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "mysecret", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    stop_grace_period: 5s
+
+  mysql:
+    image: docker.io/library/mysql:9.5.0-oraclelinux9
+    network_mode: host
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_pw
+      MYSQL_DATABASE: counterpoint_db
+      MYSQL_USER: counterpoint_app
+      MYSQL_PASSWORD: user_secret_pw
+    volumes:
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql:ro,Z
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 10s
+
+  kafka:
+    image: docker.io/apache/kafka:4.0.0
+    network_mode: host
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: "1"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://127.0.0.1:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://127.0.0.1:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@127.0.0.1:9093"
+      CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: "1"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 20s

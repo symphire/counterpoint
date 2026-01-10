@@ -1,0 +1,44 @@
+{
+  "db_name": "MySQL",
+  "query": "\nSELECT group_id AS \"group_id: GroupId\", group_name AS \"group_name: String\", conversation_id AS \"conversation_id: ConversationId\"\nFROM chat_group\nWHERE group_id = ?\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "group_id: GroupId",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | PRIMARY_KEY | BINARY | NO_DEFAULT_VALUE",
+          "max_size": 16
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "group_name: String",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "max_size": 256
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "conversation_id: ConversationId",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | UNIQUE_KEY | BINARY | NO_DEFAULT_VALUE",
+          "max_size": 16
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "74542429c508a13b7a5b503914cbab92bc7225419288362c18c70eebac8d7d73"
+}

@@ -1,49 +1,72 @@
-# ServerOxide
-A Rust server.
+# Counterpoint: A Chat Server
+
+Counterpoint is a Rust-based chat server built to explore real-world backend architecture patterns, service
+boundaries, and infrastructure development.
+
+## Blog & Design Notes
+
+Detailed design notes, architecture decisions, screenshots, logs, and sample events are documented here: TODO
 
 ## Requirements
 
 - Rust (latest stable)
-- `wscat` for WebSocket testing: `npm install -g wscat`
-- Place self-signed certificate files at:
-  - `certs/dev_cert.pem`
-  - `certs/dev_key.pem`
+- Podman + podman-compose (or another compatible container runtime)
+- Optional: [Client application](https://github.com/symphire/tune) (recommended for a full experience)
 
 ## Quick Start
 
-### 1. Run the Server
+If you just want a quick look at the project, running everything in containers is the easiest way to get started and
+minimizes local environment setup.
 
-```bash
-cargo run --bin counterpoint
+The following commands will:
+1. Generate a self-signed TLS certificate
+2. Start the full container stack (infra + server)
+
+```shell
+cd counterpoint
+bash dev-tools/create
+podman compose up -d
 ```
 
-### 2. Try the Basics
+Once the server logs "server started", it is ready to accept connections.
 
-Run the manual test script to try:
+## Alternative Startup Methods
 
-- Captcha generation
-- User signup & login
+### Run the Server on Host (Development mode)
 
-```bash
-cd dev-tools
-bash manual_dev_test.sh
+For development and debugging, you may prefer to run the server directly on the host while keeping infrastructure
+services in containers.
+
+Start the required infrastructure services:
+
+```shell
+podman compose up -d redis mysql kafka
 ```
 
-### 3. WebSocket Chat Demo
+Wait until all containers report `healthy` via `podman ps`, then start the server:
 
-Open four terminal tabs and run:
 
-```bash
-wscat -c wss://127.0.0.1:8443/api/v1/chat \
-  --no-check \
-  -H 'Authorization: Bearer fake-access-token:testuser0'
+```shell
+cargo run --package counterpoint --bin counterpoint
 ```
-Replace `testuser0` with `testuser1`, `testuser2`, and `testuser3` for additional users.
 
-Send a message: `{"type":"send","payload":{"conversation_id":"00000000-0000-0000-0000-000000000000","content":"Hello"}}`
+This mode provides faster iteration and more convenient debugging.
 
-#### Message Routing Behavior
+### Run Without a Client
 
-- **testuser0 ↔ testuser1**: private 1-1 chat
-- **testuser2 → testuser0 & testuser1**: group chat simulation
-- **testuser3**: messages are dropped (simulates error case)
+If you do not have a client application available, you can use a one-off interactive demo tool that invokes the
+server’s public APIs and prints serialized responses.
+
+```shell
+podman compose --profile tools --podman-run-args="-it" run --rm infra-demo
+```
+After the tool starts, you will see 13 informational log entries.
+Wait until they finish printing, then press **Enter** to display the simulated chat history and exit.
+
+## Platform Notes
+
+The startup methods above are tested on **Arch Linux**.
+
+They may require adjustments on other platforms (e.g. macOS or Windows).
+If you encounter issues, please refer to the blog posts for screenshots, logs, and example outputs to verify
+expected behavior.

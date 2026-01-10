@@ -1,0 +1,54 @@
+{
+  "db_name": "MySQL",
+  "query": "\nSELECT\n    IF(? = f.user_min, f.user_max, f.user_min) AS \"other_user: UserId\",\n    u.username                                 AS username,\n    dp.conversation_id                         AS \"conversation_id: ConversationId\",\n    f.created_at                               AS \"since: DateTime<Utc>\"\nFROM friendship f\nJOIN direct_pair dp\n  ON dp.user_min = f.user_min AND dp.user_max = f.user_max\nJOIN user u\nON u.user_id = IF(? = f.user_min, f.user_max, f.user_min)\nWHERE f.status = 'accepted'\n  AND (? = f.user_min OR ? = f.user_max)\n  AND (\n      f.created_at < ?\n      OR (f.created_at = ? AND IF(? = f.user_min, f.user_max, f.user_min) < ?)\n  )\nORDER BY f.created_at DESC,\n         u.username ASC\nLIMIT ?\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "other_user: UserId",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | BINARY",
+          "max_size": 16
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "max_size": 128
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "conversation_id: ConversationId",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | MULTIPLE_KEY | BINARY | NO_DEFAULT_VALUE",
+          "max_size": 16
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "since: DateTime<Utc>",
+        "type_info": {
+          "type": "Timestamp",
+          "flags": "NOT_NULL | BINARY | TIMESTAMP",
+          "max_size": 26
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "464f3360cf41d0fdd9c359e03ae6a66da591db8e95c3a39ac16e4bfb49fac6d6"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\nUPDATE conversation\nSET last_msg_off = GREATEST(last_msg_off, ?),\n    last_msg_at  = GREATEST(COALESCE(last_msg_at, TIMESTAMP('1970-01-01 00:00:00')), ?)\nWHERE conversation_id = ?\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "84c3e7e0a5ced5fca28331932dada39e681a2697ad167ac3759372e4b048d57b"
+}
