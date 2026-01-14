@@ -1,5 +1,7 @@
 use anyhow::{Result, anyhow};
-use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt, Registry};
+use tracing_subscriber::{
+    EnvFilter, Registry, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt,
+};
 
 pub struct LogConfig {
     pub filter: String,

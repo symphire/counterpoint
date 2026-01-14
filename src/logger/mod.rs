@@ -4,4 +4,4 @@
 mod logger;
 pub use logger::*;
 
-pub use tracing::{trace, info, debug, warn, error};
+pub use tracing::{debug, error, info, trace, warn};

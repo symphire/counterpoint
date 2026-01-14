@@ -1,11 +1,9 @@
-use std::sync::Arc;
+use crate::domain_model::*;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
+use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use warp::ws::Message;
-use crate::domain::UserId;
-use crate::infra::S2CEvent;
-
 
 // region conn message
 
@@ -52,7 +50,6 @@ impl From<ConnMessage> for Message {
 
 // endregion
 
-
 // region conn sender
 
 #[async_trait::async_trait]
@@ -77,7 +74,6 @@ impl ConnSender for Sender<ConnMessage> {
 }
 
 // endregion
-
 
 // region conn receiver
 
@@ -104,7 +100,6 @@ impl ConnReceiver for Receiver<ConnMessage> {
 
 // endregion
 
-
 #[derive(Debug)]
 pub struct WsMessage(pub String);
 
@@ -123,8 +118,6 @@ pub trait OutboundQueue: Send + Sync {
     async fn enqueue(&self, receiver: UserId, event: &S2CEvent) -> anyhow::Result<()>;
 }
 
-
-
 #[async_trait::async_trait]
 pub trait EventPublisher: Send + Sync {
     async fn publish(&self, topic: &str, key: &[u8], payload: &[u8]) -> anyhow::Result<()>;
@@ -132,7 +125,12 @@ pub trait EventPublisher: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait EventConsumer: Send + Sync {
-    async fn run(&self, consumer_group_id: &str, topics: &[&str], handler: Arc<dyn EventHandler>) -> anyhow::Result<()>;
+    async fn run(
+        &self,
+        consumer_group_id: &str,
+        topics: &[&str],
+        handler: Arc<dyn EventHandler>,
+    ) -> anyhow::Result<()>;
 }
 
 pub enum HandleOutcome {

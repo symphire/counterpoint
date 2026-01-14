@@ -1,12 +1,12 @@
 pub mod api;
-pub mod domain;
 pub mod logger;
 pub mod settings;
 
-pub mod auth;
-pub mod captcha;
-pub mod chat;
-pub mod user;
-
 pub mod server;
-pub mod infra;
+
+pub mod application_port;
+pub mod application_impl;
+pub mod domain_model;
+pub mod domain_port;
+pub mod infra_mysql;
+pub mod infra_redis;

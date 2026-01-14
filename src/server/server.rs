@@ -1,26 +1,21 @@
-use crate::auth::*;
-use crate::chat::*;
-use crate::domain::{UserService, AuthService, CaptchaService, CredentialHasher, Argon2PasswordHasher, FakeCaptchaService, JwtConfig, JwtHs256Codec, RealCaptchaService, TokenCodec, TxManager, RealAuthService, RelationshipService, RealRelationshipService, ConversationService, RealConversationService, RealUserService};
-use crate::infra::{AuthRepo, AuthSessionStore, CaptchaStore, ConversationRepo, ConversationRoleRepo, FriendshipRepo, GroupIdemRepo, GroupRepo, MessageRepo, MySqlConversationRepo, MySqlConversationRoleRepo, MySqlFriendshipRepo, MySqlGroupIdemRepo, MySqlGroupRepo, MySqlMessageRepo, MySqlOutboxRepo, MySqlTxManager, MySqlUserRepo, OutboxRepo, RedisCaptchaStore, RedisSessionStore, MySqlAuthRepo, UserRepo};
+use crate::application_impl::*;
+use crate::application_port::*;
+use crate::domain_port::*;
+use crate::infra_mysql::*;
+use crate::infra_redis::*;
 use crate::logger::*;
+use crate::server::*;
 use crate::settings::Settings;
-use crate::user::*;
 use nanoid::nanoid;
+use sqlx::{MySql, Pool};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use sqlx::{MySql, Pool};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use crate::server::{ConnectionAcceptor, EventConsumer, EventHandler, EventPublisher, OutboundQueue, ServiceRegistry, SessionHub};
-use crate::server::event_consumer_impl::KafkaConsumer;
-use crate::server::event_handler_impl::ConnFanoutHandler;
-use crate::server::event_publisher_impl::KafkaPublisher;
-use crate::server::notifier::Notifier;
 
 pub struct Server {
     pub auth_service: Arc<dyn AuthService>,
     pub captcha_service: Arc<dyn CaptchaService>,
-    pub chat_service: Arc<dyn ChatService>,
     pub user_service: Arc<dyn UserService>,
     pub relationship_service: Arc<dyn RelationshipService>,
     pub conversation_service: Arc<dyn ConversationService>,
@@ -42,9 +37,13 @@ impl Server {
         const REDIS_DSN: &str = "redis://:mysecret@127.0.0.1:6379";
         let redis_client = redis::Client::open(REDIS_DSN)?;
         let redis_manager = redis_client.get_connection_manager().await?;
-        let captcha_store = Arc::new(RedisCaptchaStore::new(redis_manager.clone(), "captcha".to_string()));
+        let captcha_store = Arc::new(RedisCaptchaStore::new(
+            redis_manager.clone(),
+            "captcha".to_string(),
+        ));
 
-        const MYSQL_DSN: &str = "mysql://counterpoint_app:user_secret_pw@localhost:3306/counterpoint_db";
+        const MYSQL_DSN: &str =
+            "mysql://counterpoint_app:user_secret_pw@localhost:3306/counterpoint_db";
         let pool = Pool::<MySql>::connect(MYSQL_DSN).await?;
         let tx_manager: Arc<dyn TxManager> = Arc::new(MySqlTxManager::new(pool.clone()));
 
@@ -60,26 +59,31 @@ impl Server {
             signing_key: key,
         }));
 
-        let session_store: Arc<dyn AuthSessionStore> = Arc::new(RedisSessionStore::new(
+        let session_store: Arc<dyn AuthSessionStore> = Arc::new(RedisAuthSessionStore::new(
             redis_manager.clone(),
             format!("auth:{}", run_id),
         ));
 
         let auth_repo: Arc<dyn AuthRepo> = Arc::new(MySqlAuthRepo::new(pool.clone()));
         let user_repo: Arc<dyn UserRepo> = Arc::new(MySqlUserRepo::new(pool.clone()));
-        let friendship_repo: Arc<dyn FriendshipRepo> = Arc::new(MySqlFriendshipRepo::new(pool.clone()));
+        let friendship_repo: Arc<dyn FriendshipRepo> =
+            Arc::new(MySqlFriendshipRepo::new(pool.clone()));
         let group_repo: Arc<dyn GroupRepo> = Arc::new(MySqlGroupRepo::new(pool.clone()));
-        let group_idem_repo: Arc<dyn GroupIdemRepo> = Arc::new(MySqlGroupIdemRepo::new(pool.clone()));
-        let conversation_repo: Arc<dyn ConversationRepo> = Arc::new(MySqlConversationRepo::new(pool.clone()));
-        let conversation_role_repo: Arc<dyn ConversationRoleRepo> = Arc::new(MySqlConversationRoleRepo::new(pool.clone()));
+        let group_idem_repo: Arc<dyn GroupIdemRepo> =
+            Arc::new(MySqlGroupIdemRepo::new(pool.clone()));
+        let conversation_repo: Arc<dyn ConversationRepo> =
+            Arc::new(MySqlConversationRepo::new(pool.clone()));
+        let conversation_role_repo: Arc<dyn ConversationRoleRepo> =
+            Arc::new(MySqlConversationRoleRepo::new(pool.clone()));
         let message_repo: Arc<dyn MessageRepo> = Arc::new(MySqlMessageRepo::new(pool.clone()));
         let outbox_repo: Arc<dyn OutboxRepo> = Arc::new(MySqlOutboxRepo::new(pool.clone()));
 
         let captcha_service: Arc<dyn CaptchaService> = match settings.captcha.backend.as_str() {
             "fake" => Arc::new(FakeCaptchaService::new()),
-            "real" => {
-                Arc::new(RealCaptchaService::new(captcha_store, "my-secret-key".into()))
-            }
+            "real" => Arc::new(RealCaptchaService::new(
+                captcha_store,
+                "my-secret-key".into(),
+            )),
             other => return Err(anyhow::anyhow!("Unknown captcha backend: {}", other)),
         };
 
@@ -126,14 +130,6 @@ impl Server {
                 tx_manager.clone(),
             ));
 
-        let fake_user_service = Arc::new(FakeUserService::new());
-        let chat_service = match settings.chat.backend.as_str() {
-            "fake" => Arc::new(FakeChatService::new(fake_user_service)),
-            other => return Err(anyhow::anyhow!("Unknown chat backend: {}", other)),
-        };
-        debug!(?chat_service);
-
-
         // region runtime infra
         let cancel = CancellationToken::new();
 
@@ -156,7 +152,8 @@ impl Server {
         let connection_acceptor: Arc<dyn ConnectionAcceptor> = session_hub.clone();
         let outbound_queue: Arc<dyn OutboundQueue> = session_hub.clone();
 
-        let fanout_handler: Arc<dyn EventHandler> = Arc::new(ConnFanoutHandler::new(outbound_queue.clone()));
+        let fanout_handler: Arc<dyn EventHandler> =
+            Arc::new(ConnFanoutHandler::new(outbound_queue.clone()));
         let notifier = Notifier::new(
             tx_manager.clone(),
             outbox_repo.clone(),
@@ -168,7 +165,11 @@ impl Server {
         let run_id_clone = run_id.clone();
         let fanout_handle = tokio::spawn(async move {
             let _ = consumer
-                .run(&format!("ws-fanout-{}", run_id_clone), &[&topic], fanout_handler)
+                .run(
+                    &format!("ws-fanout-{}", run_id_clone),
+                    &[&topic],
+                    fanout_handler,
+                )
                 .await;
         });
         let notifier_handle = tokio::spawn(async move {
@@ -182,7 +183,6 @@ impl Server {
         Ok(Self {
             auth_service,
             captcha_service,
-            chat_service,
             user_service,
             relationship_service,
             conversation_service,

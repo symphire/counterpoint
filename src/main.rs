@@ -1,10 +1,10 @@
-use std::fs;
-use std::sync::Arc;
-use tokio::signal;
 use counterpoint::api;
 use counterpoint::logger::*;
 use counterpoint::server::*;
 use counterpoint::settings::*;
+use std::fs;
+use std::sync::Arc;
+use tokio::signal;
 use warp::Filter;
 
 #[tokio::main]
@@ -15,15 +15,23 @@ async fn main() -> anyhow::Result<()> {
 
     let project_settings = parse_settings(cli.settings.as_deref())?;
     info!(?project_settings);
-    let logger_config = LogConfig { filter: project_settings.log.filter.clone() };
+    let logger_config = LogConfig {
+        filter: project_settings.log.filter.clone(),
+    };
     logger.reload_from_config(&logger_config)?;
 
     let address: std::net::SocketAddr = project_settings.http.address.parse()?;
     if !fs::metadata(&project_settings.http.cert_path)?.is_file() {
-        return Err(anyhow::anyhow!("TLS cert is not a regular file: {:?}", project_settings.http.cert_path));
+        return Err(anyhow::anyhow!(
+            "TLS cert is not a regular file: {:?}",
+            project_settings.http.cert_path
+        ));
     }
     if !fs::metadata(&project_settings.http.key_path)?.is_file() {
-        return Err(anyhow::anyhow!("TLS key is not a regular file: {:?}", project_settings.http.key_path));
+        return Err(anyhow::anyhow!(
+            "TLS key is not a regular file: {:?}",
+            project_settings.http.key_path
+        ));
     }
 
     let server = Arc::new(Server::try_new(&project_settings).await?);

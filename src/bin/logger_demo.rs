@@ -6,7 +6,9 @@ fn main() -> anyhow::Result<()> {
     debug!("bootstrap debug log");
     info!("bootstrap info log");
 
-    let config = LogConfig{ filter: "debug".to_string() };
+    let config = LogConfig {
+        filter: "debug".to_string(),
+    };
     logger.reload_from_config(&config)?;
     trace!("application trace log");
     debug!("application debug log");

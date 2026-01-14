@@ -1,14 +1,12 @@
 use super::error::*;
 use super::handler;
-use crate::auth::*;
-use crate::chat::ChatService;
-use crate::domain::AuthService;
-use crate::domain::UserId;
+use crate::api::v1::handler::{ConversationHistoryQuery, FriendListQuery};
+use crate::application_port::*;
+use crate::domain_model::UserId;
 use crate::server::*;
 use std::convert::Infallible;
 use std::sync::Arc;
-use warp::{http, reject, Filter};
-use crate::api::v1::handler::{ConversationHistoryQuery, FriendListQuery};
+use warp::{Filter, http, reject};
 
 pub fn routes(
     server: Arc<Server>,
@@ -52,7 +50,7 @@ pub fn routes(
         .and(with(server.user_service.clone()))
         .and(with(server.relationship_service.clone()))
         .and_then(handler::add_friend);
-    
+
     let conversation_history = warp::get()
         .and(warp::path("conversation_history"))
         .and(warp::path::end())
@@ -66,20 +64,24 @@ pub fn routes(
         .and(warp::path::end())
         .and(with_verification(server.auth_service.clone()))
         .and(warp::ws())
-        .and(with(server.chat_service.clone()))
         .and(with(server.connection_acceptor.clone()))
         .map(
             |user_id: UserId,
              ws: warp::ws::Ws,
-             chat_service: Arc<dyn ChatService>,
              connection_acceptor: Arc<dyn ConnectionAcceptor>| {
                 ws.on_upgrade(move |socket| {
-                    handler::join_chat(socket, user_id, chat_service, connection_acceptor)
+                    handler::join_chat(socket, user_id, connection_acceptor)
                 })
             },
         );
 
-    captcha.or(login).or(signup).or(friend_list).or(add_friend).or(conversation_history).or(chat)
+    captcha
+        .or(login)
+        .or(signup)
+        .or(friend_list)
+        .or(add_friend)
+        .or(conversation_history)
+        .or(chat)
 }
 
 fn with<ServiceType>(

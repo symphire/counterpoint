@@ -11,24 +11,24 @@
 ///
 /// This is intended only for manual testing and should not be enabled in production.
 
-use std::sync::Arc;
-use std::time::Duration;
+use counterpoint::application_impl::*;
+use counterpoint::application_port::*;
+use counterpoint::domain_model::*;
+use counterpoint::domain_port::*;
+use counterpoint::infra_mysql::*;
+use counterpoint::infra_redis::*;
+use counterpoint::server::*;
 use futures_util::future::join_all;
 use nanoid::nanoid;
 use sqlx::{MySql, Pool};
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::io;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::sync::CancellationToken;
-use tracing_subscriber::{fmt, EnvFilter};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use counterpoint::domain::{Argon2PasswordHasher, AuthService, CaptchaId, CaptchaService, ConversationId, ConversationService, CredentialHasher, IdempotencyKey, JwtConfig, JwtHs256Codec, LoginInput, LoginResult, MessageId, RealConversationService, PageSize, RealAuthService, RealCaptchaService, RealRelationshipService, RelationshipService, SignupInput, TokenCodec, TxManager, UserId, ValidationInput};
-use counterpoint::infra::{AuthRepo, AuthSessionStore, C2SCommand, CaptchaStore, ChatMessageSend, ConversationRepo, ConversationRoleRepo, FriendshipRepo, GroupIdemRepo, GroupRepo, MessageRepo, MySqlConversationRepo, MySqlConversationRoleRepo, MySqlFriendshipRepo, MySqlGroupIdemRepo, MySqlGroupRepo, MySqlMessageRepo, MySqlOutboxRepo, MySqlTxManager, MySqlUserRepo, OutboxRepo, RedisCaptchaStore, RedisSessionStore, S2CEvent, MySqlAuthRepo, UserRepo};
-use counterpoint::server::{ConnMessage, ConnReceiver, ConnSender, ConnectionAcceptor, EventConsumer, EventHandler, EventPublisher, OutboundQueue, ServiceRegistry, SessionHub};
-use counterpoint::server::KafkaConsumer;
-use counterpoint::server::ConnFanoutHandler;
-use counterpoint::server::KafkaPublisher;
-use counterpoint::server::Notifier;
+use tracing_subscriber::{EnvFilter, fmt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -39,12 +39,10 @@ async fn main() -> anyhow::Result<()> {
         .with(fmt::layer())
         .init();
 
-
     let alphabet: [char; 16] = [
         '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f',
     ];
     let run_id = nanoid!(10, &alphabet);
-
 
     // region prepare connection
 
@@ -55,14 +53,14 @@ async fn main() -> anyhow::Result<()> {
     let pong: String = redis::cmd("PING").query_async(&mut redis_manager).await?;
     println!("PING -> {}", pong);
 
-    const MYSQL_DSN: &str = "mysql://counterpoint_app:user_secret_pw@localhost:3306/counterpoint_db";
+    const MYSQL_DSN: &str =
+        "mysql://counterpoint_app:user_secret_pw@localhost:3306/counterpoint_db";
     let pool = Pool::<MySql>::connect(MYSQL_DSN).await?;
 
     let value: i32 = sqlx::query_scalar("SELECT 1").fetch_one(&pool).await?;
     println!("MySQL -> {}", value);
 
     // endregion
-
 
     // region initialization
 
@@ -87,11 +85,10 @@ async fn main() -> anyhow::Result<()> {
         signing_key: key,
     }));
 
-    let session_store: Arc<dyn AuthSessionStore> = Arc::new(RedisSessionStore::new(
+    let session_store: Arc<dyn AuthSessionStore> = Arc::new(RedisAuthSessionStore::new(
         redis_manager.clone(),
         format!("auth:{}", run_id),
     ));
-
 
     let tx_manager: Arc<dyn TxManager> = Arc::new(MySqlTxManager::new(pool.clone()));
 
@@ -136,7 +133,6 @@ async fn main() -> anyhow::Result<()> {
             tx_manager.clone(),
         ));
 
-
     let cancel = CancellationToken::new();
 
     let topic = format!("chat.event.{}", run_id);
@@ -158,7 +154,8 @@ async fn main() -> anyhow::Result<()> {
     let connection_acceptor: Arc<dyn ConnectionAcceptor> = session_hub.clone();
     let outbound_queue: Arc<dyn OutboundQueue> = session_hub.clone();
 
-    let fanout_handler: Arc<dyn EventHandler> = Arc::new(ConnFanoutHandler::new(outbound_queue.clone()));
+    let fanout_handler: Arc<dyn EventHandler> =
+        Arc::new(ConnFanoutHandler::new(outbound_queue.clone()));
     let notifier = Notifier::new(
         tx_manager.clone(),
         outbox_repo.clone(),
@@ -168,17 +165,20 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let run_id_clone = run_id.clone();
-    let fanout_handle = tokio::spawn(async move {
+    let _fanout_handle = tokio::spawn(async move {
         let _ = consumer
-            .run(&format!("ws-fanout-{}", run_id_clone), &[&topic], fanout_handler)
+            .run(
+                &format!("ws-fanout-{}", run_id_clone),
+                &[&topic],
+                fanout_handler,
+            )
             .await;
     });
-    let notifier_handle = tokio::spawn(async move {
+    let _notifier_handle = tokio::spawn(async move {
         let _ = notifier.run().await;
     });
 
     // endregion
-
 
     // use cases
 
@@ -231,7 +231,9 @@ async fn main() -> anyhow::Result<()> {
         let (s2c_tx, mut s2c_rx) = tokio::sync::mpsc::channel::<ConnMessage>(256);
         let c2s_channel: Box<dyn ConnReceiver> = Box::new(c2s_rx);
         let s2c_channel: Box<dyn ConnSender> = Box::new(s2c_tx);
-        connection_acceptor.accept_connection(s2c_channel, c2s_channel, users[i].1.user_id).await?;
+        connection_acceptor
+            .accept_connection(s2c_channel, c2s_channel, users[i].1.user_id)
+            .await?;
         c2s.push(c2s_tx.clone());
         let handle = tokio::spawn(async move {
             while let Some(message) = s2c_rx.recv().await {
@@ -300,7 +302,8 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     tracing::debug!("members of group: {:?}", members);
 
-    for i in [0, 1, 3] {  // 0-1, 0-2, 0-1-2
+    for i in [0, 1, 3] {
+        // 0-1, 0-2, 0-1-2
         let command = C2SCommand::ChatMessageSend(ChatMessageSend {
             conversation_id: conversations[i],
             message_id: MessageId(uuid::Uuid::new_v4()),
@@ -311,11 +314,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut reader = BufReader::new(io::stdin()).lines();
-    println!(r#"
+    println!(
+        r#"
     **********************************************************************
     ** Press Enter to logout clients, show history and exit...
     **********************************************************************
-    "#);
+    "#
+    );
     let _ = reader.next_line().await;
 
     for tx in c2s {
@@ -325,18 +330,23 @@ async fn main() -> anyhow::Result<()> {
     join_all(handles).await;
     tracing::info!("All client tasks finished.");
 
-    for (i, j) in [(0, 0), (2, 1), (1, 3)] {  // 0-1, 0-2, 0-1-2
+    for (i, j) in [(0, 0), (2, 1), (1, 3)] {
+        // 0-1, 0-2, 0-1-2
         let history = conversation_service
             .get_history(users[i].1.user_id, conversations[j], PageSize(10), None)
             .await?;
-        tracing::debug!("history ({:?}, {:?}): {:?}", users[i].1.user_id, conversations[i], history);
+        tracing::debug!(
+            "history ({:?}, {:?}): {:?}",
+            users[i].1.user_id,
+            conversations[i],
+            history
+        );
     }
 
     let recent = conversation_service
         .recent_conversations(users[0].1.user_id, PageSize(10), None)
         .await?;
     tracing::debug!("recent conversations: {:?}", recent);
-
 
     Ok(())
 }

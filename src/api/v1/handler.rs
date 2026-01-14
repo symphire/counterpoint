@@ -1,15 +1,10 @@
 use super::error::*;
-use crate::auth::*;
-use crate::chat::ChatService;
-use crate::domain::{ConversationId, ConversationService, IdempotencyKey, OffsetCursor, UserId, UserService};
-use crate::domain::{
-    AuthService, AuthTokens, CaptchaId, CaptchaService, FriendCursor, LoginInput, PageSize,
-    RelationshipService, SignupInput, ValidationInput,
-};
+use crate::application_port::*;
+use crate::domain_model::*;
 use crate::logger::*;
-use crate::server::{ConnSender, ConnectionAcceptor};
+use crate::server::ConnectionAcceptor;
 use chrono::{DateTime, Utc};
-use futures_util::{StreamExt, TryFutureExt};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{self, reject};
@@ -168,7 +163,8 @@ pub async fn generate_friend_list(
     relationship_service: Arc<dyn RelationshipService>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let page_size = query.page_size;
-    let after = query.after
+    let after = query
+        .after
         .map(|s| s.parse::<FriendCursor>().map_err(ApiErrorCode::internal))
         .transpose()
         .map_err(reject::custom)?;
@@ -223,7 +219,8 @@ pub async fn generate_conversation_history(
     conversation_service: Arc<dyn ConversationService>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let page_size = query.page_size;
-    let before = query.before
+    let before = query
+        .before
         .map(|s| s.parse::<OffsetCursor>().map_err(ApiErrorCode::internal))
         .transpose()
         .map_err(reject::custom)?;
@@ -241,7 +238,6 @@ pub async fn generate_conversation_history(
 pub async fn join_chat(
     socket: warp::ws::WebSocket,
     user_id: UserId,
-    chat_service: Arc<dyn ChatService>,
     connection_acceptor: Arc<dyn ConnectionAcceptor>,
 ) {
     let (s2c, c2s) = socket.split();
@@ -251,7 +247,4 @@ pub async fn join_chat(
     {
         error!("accepting connection: {}", e);
     }
-    // if let Err(e) = chat_service.join_chat(to_user, from_user, user_id).await {
-    //     error!("Error joining chat: {}", e);
-    // }
 }

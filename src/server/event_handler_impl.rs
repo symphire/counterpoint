@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use crate::infra::S2CEnvelope;
+use crate::domain_model::*;
 use crate::server::{EventHandler, HandleOutcome, OutboundQueue};
+use std::sync::Arc;
 
 pub struct ConnFanoutHandler {
     outbound_queue: Arc<dyn OutboundQueue>,

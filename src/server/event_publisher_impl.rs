@@ -1,7 +1,7 @@
-use std::time::Duration;
+use crate::server::EventPublisher;
 use rdkafka::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use crate::server::EventPublisher;
+use std::time::Duration;
 
 pub struct KafkaPublisher {
     inner: FutureProducer,

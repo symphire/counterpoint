@@ -1,14 +1,9 @@
-
-
-use crate::domain::{ConversationService, MessageRecord, UserId};
-use crate::infra::{C2SCommand, C2SEnvelope, ChatMessageACK, ChatMessageSend, S2CEvent};
-use crate::server::{
-    ConnMessage, ConnReceiver, ConnSender, ConnectionAcceptor, OutboundQueue, WsMessage,
-};
+use crate::application_port::*;
+use crate::domain_model::*;
+use crate::server::*;
 use anyhow::anyhow;
 use dashmap::DashMap;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::AtomicU64;
 use std::time::Duration;
 use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -311,13 +306,15 @@ async fn handle_incoming_message(
                             message_offset: record.message_offset,
                             created_at: record.created_at,
                         });
-                        let _ = sender_control_tx.send(ConnMessage::Text(serde_json::to_string(&ack)?)).await;
+                        let _ = sender_control_tx
+                            .send(ConnMessage::Text(serde_json::to_string(&ack)?))
+                            .await;
                         Ok(())
-                    },
+                    }
                     Err(e) => {
                         tracing::error!("Failed to send message: {e}");
                         Err(anyhow!(e))
-                    },
+                    }
                 }
             } else {
                 tracing::error!("failed to deserialize message: {}", t);

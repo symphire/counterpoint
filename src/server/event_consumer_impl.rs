@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use std::time::Duration;
+use crate::server::{EventConsumer, EventHandler, HandleOutcome};
 use futures_util::StreamExt;
-use rdkafka::{ClientConfig, Message};
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::{ClientConfig, Message};
+use std::sync::Arc;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use crate::server::{EventConsumer, EventHandler, HandleOutcome};
 
 pub struct KafkaConsumer {
     bootstrap_server: String,
@@ -14,7 +14,11 @@ pub struct KafkaConsumer {
 }
 
 impl KafkaConsumer {
-    pub fn new(bootstrap_server: &str, client_id: &str, cancellation_token: CancellationToken) -> Self {
+    pub fn new(
+        bootstrap_server: &str,
+        client_id: &str,
+        cancellation_token: CancellationToken,
+    ) -> Self {
         Self {
             bootstrap_server: bootstrap_server.to_string(),
             client_id: client_id.to_string(),
@@ -27,11 +31,13 @@ impl KafkaConsumer {
             .set("bootstrap.servers", bootstrap)
             .create()?;
 
-        let new_topics: Vec<_> = topics.iter()
+        let new_topics: Vec<_> = topics
+            .iter()
             .map(|t| NewTopic::new(t, 1, TopicReplication::Fixed(1)))
             .collect();
 
-        let _ = admin.create_topics(&new_topics, &AdminOptions::new())
+        let _ = admin
+            .create_topics(&new_topics, &AdminOptions::new())
             .await?;
 
         Ok(())

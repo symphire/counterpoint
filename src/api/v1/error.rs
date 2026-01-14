@@ -1,12 +1,11 @@
 use crate::api::v1::handler::ApiResponse;
-use crate::domain::AuthError;
-use crate::domain::CaptchaError;
+use crate::application_port::*;
 use serde::Serialize;
 use std::convert::Infallible;
 use thiserror::Error;
 use tracing::warn;
 use warp::http::StatusCode;
-use warp::{reject, Rejection};
+use warp::{Rejection, reject};
 
 pub async fn recover_error(err: Rejection) -> Result<impl warp::Reply, Infallible> {
     if let Some(err) = err.find::<ApiErrorCode>() {
@@ -21,7 +20,10 @@ pub async fn recover_error(err: Rejection) -> Result<impl warp::Reply, Infallibl
                 message: format!("Unhandled error: {:?}", err),
             }),
         });
-        Ok(warp::reply::with_status(json, StatusCode::INTERNAL_SERVER_ERROR))
+        Ok(warp::reply::with_status(
+            json,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ))
     }
 }
 

@@ -14,17 +14,17 @@ pub struct Settings {
 
 #[derive(Debug, Deserialize)]
 pub struct Auth {
-    pub backend: String,  // "fake" or "real"
+    pub backend: String, // "fake" or "real"
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Captcha {
-    pub backend: String,  // "fake" or "real"
+    pub backend: String, // "fake" or "real"
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Chat {
-    pub backend: String,  // "fake" or "real"
+    pub backend: String, // "fake" or "real"
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,7 +41,7 @@ pub struct Log {
 
 #[derive(Debug, Deserialize)]
 pub struct User {
-    pub backend: String,  // "fake" or "real"
+    pub backend: String, // "fake" or "real"
 }
 
 #[cfg(debug_assertions)]
