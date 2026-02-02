@@ -5,7 +5,7 @@ boundaries, and infrastructure development.
 
 ## Blog & Design Notes
 
-Detailed design notes, architecture decisions, screenshots, logs, and sample events are documented here: TODO
+Detailed design notes, architecture decisions, screenshots, logs, and sample events are documented here: [聊天服务器设计：架构、核心流程与可靠性保证](https://zhuanlan.zhihu.com/p/2001398304089585310)
 
 ## Requirements
 
