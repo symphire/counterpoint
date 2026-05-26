@@ -27,4 +27,10 @@ pub trait ConversationRoleRepo: Send + Sync {
         conversation_id: ConversationId,
         user_id: UserId,
     ) -> Result<bool, RelationError>;
+    async fn remove_membership_in_tx(
+        &self,
+        tx: &mut dyn StorageTx<'_>,
+        conversation_id: ConversationId,
+        user_id: UserId,
+    ) -> Result<(), RelationError>;
 }

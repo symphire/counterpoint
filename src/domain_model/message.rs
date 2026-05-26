@@ -30,6 +30,23 @@ pub struct TimeCursor {
     pub conversation_id: ConversationId, // tie-breaker for stable pagination
 }
 
+impl FromStr for TimeCursor {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (date_str, id_str) = s.split_once('~').ok_or("invalid cursor format")?;
+        let last_msg_at = date_str
+            .parse::<DateTime<Utc>>()
+            .map_err(|e| e.to_string())?;
+        let conversation_id = uuid::Uuid::parse_str(id_str)
+            .map(ConversationId)
+            .map_err(|e| e.to_string())?;
+        Ok(TimeCursor {
+            last_msg_at,
+            conversation_id,
+        })
+    }
+}
+
 /// Cursor for offset-ordered lists (history)
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct OffsetCursor {

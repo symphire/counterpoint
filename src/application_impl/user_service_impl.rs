@@ -1,5 +1,5 @@
 use crate::application_port::{AuthError, UserService};
-use crate::domain_model::UserId;
+use crate::domain_model::{PageSize, UserId, UserCursor, UserProfile};
 use crate::domain_port::{TxManager, UserRepo};
 use std::sync::Arc;
 
@@ -36,5 +36,18 @@ impl UserService for RealUserService {
             .map_err(|e| AuthError::Store(e.to_string()))?;
 
         Ok(user_id)
+    }
+
+    async fn get_profile(&self, user_id: UserId) -> Result<UserProfile, AuthError> {
+        self.user_repo.get_profile(user_id).await
+    }
+
+    async fn search_users(
+        &self,
+        query: &str,
+        page_size: PageSize,
+        after: Option<UserCursor>,
+    ) -> Result<Vec<UserProfile>, AuthError> {
+        self.user_repo.search_by_prefix(query, page_size, after).await
     }
 }

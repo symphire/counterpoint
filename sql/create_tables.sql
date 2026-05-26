@@ -259,3 +259,39 @@ CREATE TABLE IF NOT EXISTS outbox
     ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4
     COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS group_invitation
+(
+    invitation_id BINARY(16)                              NOT NULL,
+    group_id      BINARY(16)                              NOT NULL,
+    inviter_id    BINARY(16)                              NOT NULL,
+    invitee_id    BINARY(16)                              NOT NULL,
+    status        ENUM ('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+    created_at    TIMESTAMP(6)                            NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+
+    CONSTRAINT pk_group_invitation PRIMARY KEY (invitation_id),
+    CONSTRAINT uq_invitation_invitee_group UNIQUE KEY (group_id, invitee_id),
+    CONSTRAINT fk_invitation_group FOREIGN KEY (group_id) REFERENCES chat_group (group_id) ON DELETE CASCADE,
+    CONSTRAINT fk_invitation_inviter FOREIGN KEY (inviter_id) REFERENCES user (user_id),
+    CONSTRAINT fk_invitation_invitee FOREIGN KEY (invitee_id) REFERENCES user (user_id),
+    INDEX idx_invitation_invitee (invitee_id, status, created_at)
+    ) ENGINE = InnoDB
+    DEFAULT CHARSET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS group_join_request
+(
+    request_id   BINARY(16)                              NOT NULL,
+    group_id     BINARY(16)                              NOT NULL,
+    requester_id BINARY(16)                              NOT NULL,
+    status       ENUM ('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+    created_at   TIMESTAMP(6)                            NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+
+    CONSTRAINT pk_group_join_request PRIMARY KEY (request_id),
+    CONSTRAINT uq_join_request_requester_group UNIQUE KEY (group_id, requester_id),
+    CONSTRAINT fk_join_request_group FOREIGN KEY (group_id) REFERENCES chat_group (group_id) ON DELETE CASCADE,
+    CONSTRAINT fk_join_request_requester FOREIGN KEY (requester_id) REFERENCES user (user_id),
+    INDEX idx_join_request_group (group_id, status, created_at)
+    ) ENGINE = InnoDB
+    DEFAULT CHARSET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;

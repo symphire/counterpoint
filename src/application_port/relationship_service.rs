@@ -6,6 +6,12 @@ pub enum RelationError {
     UserNotFound,
     #[error("friend request already exists")]
     FriendRequestExists,
+    #[error("friend request not found")]
+    FriendRequestNotFound,
+    #[error("invitation not found")]
+    InvitationNotFound,
+    #[error("join request not found")]
+    JoinRequestNotFound,
     #[error("friendship already established")]
     AlreadyFriends,
     #[error("group not found")]
@@ -62,4 +68,90 @@ pub trait RelationshipService: Send + Sync {
         page_size: PageSize,
         after: Option<MemberCursor>,
     ) -> Result<Vec<MemberSummary>, RelationError>;
+    async fn send_friend_request(
+        &self,
+        me: UserId,
+        other: UserId,
+    ) -> Result<(), RelationError>;
+    async fn accept_friend_request(
+        &self,
+        me: UserId,
+        requester: UserId,
+    ) -> Result<ConversationId, RelationError>;
+    async fn reject_friend_request(
+        &self,
+        me: UserId,
+        requester: UserId,
+    ) -> Result<(), RelationError>;
+    async fn list_incoming_friend_requests(
+        &self,
+        me: UserId,
+        page_size: PageSize,
+        after: Option<FriendRequestCursor>,
+    ) -> Result<Vec<FriendRequestSummary>, RelationError>;
+    async fn remove_friend(&self, me: UserId, other: UserId) -> Result<(), RelationError>;
+    async fn invite_to_group_v2(
+        &self,
+        group: GroupId,
+        host: UserId,
+        guest: UserId,
+    ) -> Result<GroupInvitationId, RelationError>;
+    async fn accept_group_invitation(
+        &self,
+        me: UserId,
+        invitation_id: GroupInvitationId,
+    ) -> Result<(), RelationError>;
+    async fn reject_group_invitation(
+        &self,
+        me: UserId,
+        invitation_id: GroupInvitationId,
+    ) -> Result<(), RelationError>;
+    async fn list_group_invitations(
+        &self,
+        me: UserId,
+        page_size: PageSize,
+        after: Option<GroupInvitationCursor>,
+    ) -> Result<Vec<GroupInvitationSummary>, RelationError>;
+    async fn request_to_join_group(
+        &self,
+        me: UserId,
+        group_id: GroupId,
+    ) -> Result<GroupJoinRequestId, RelationError>;
+    async fn accept_join_request(
+        &self,
+        me: UserId,
+        request_id: GroupJoinRequestId,
+    ) -> Result<(), RelationError>;
+    async fn reject_join_request(
+        &self,
+        me: UserId,
+        request_id: GroupJoinRequestId,
+    ) -> Result<(), RelationError>;
+    async fn list_join_requests(
+        &self,
+        me: UserId,
+        group_id: GroupId,
+        page_size: PageSize,
+        after: Option<GroupJoinRequestCursor>,
+    ) -> Result<Vec<GroupJoinRequestSummary>, RelationError>;
+    async fn leave_group(&self, me: UserId, group_id: GroupId) -> Result<(), RelationError>;
+    async fn remove_group_member(
+        &self,
+        me: UserId,
+        group_id: GroupId,
+        target: UserId,
+    ) -> Result<(), RelationError>;
+    async fn transfer_group_ownership(
+        &self,
+        me: UserId,
+        group_id: GroupId,
+        new_owner: UserId,
+    ) -> Result<(), RelationError>;
+    async fn update_group_info(
+        &self,
+        me: UserId,
+        group_id: GroupId,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<(), RelationError>;
 }

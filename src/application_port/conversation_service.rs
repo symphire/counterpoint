@@ -1,13 +1,14 @@
 use crate::domain_model::*;
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum ConversationPeer {
     Direct { other_user: UserId, name: String },
     Group { group_id: GroupId, name: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RecentConversation {
     pub conversation_id: ConversationId,
     pub peer: ConversationPeer,

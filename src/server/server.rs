@@ -71,6 +71,10 @@ impl Server {
         let group_repo: Arc<dyn GroupRepo> = Arc::new(MySqlGroupRepo::new(pool.clone()));
         let group_idem_repo: Arc<dyn GroupIdemRepo> =
             Arc::new(MySqlGroupIdemRepo::new(pool.clone()));
+        let group_invitation_repo: Arc<dyn GroupInvitationRepo> =
+            Arc::new(MySqlGroupInvitationRepo::new(pool.clone()));
+        let group_join_request_repo: Arc<dyn GroupJoinRequestRepo> =
+            Arc::new(MySqlGroupJoinRequestRepo::new(pool.clone()));
         let conversation_repo: Arc<dyn ConversationRepo> =
             Arc::new(MySqlConversationRepo::new(pool.clone()));
         let conversation_role_repo: Arc<dyn ConversationRoleRepo> =
@@ -114,6 +118,8 @@ impl Server {
                 friendship_repo,
                 group_repo,
                 group_idem_repo,
+                group_invitation_repo,
+                group_join_request_repo,
                 conversation_repo.clone(),
                 conversation_role_repo.clone(),
                 outbox_repo.clone(),

@@ -216,4 +216,33 @@ WHERE conversation_id = ? AND user_id = ?
 
         if cnt > 0 { Ok(true) } else { Ok(false) }
     }
+
+    async fn remove_membership_in_tx(
+        &self,
+        tx: &mut dyn StorageTx<'_>,
+        conversation_id: ConversationId,
+        user_id: UserId,
+    ) -> Result<(), RelationError> {
+        let tx = downcast(tx);
+
+        sqlx::query(
+            "DELETE FROM conversation_member_role WHERE conversation_id = ? AND user_id = ?",
+        )
+        .bind(conversation_id)
+        .bind(user_id)
+        .execute(tx.conn())
+        .await
+        .map_err(|e| RelationError::Store(format!("remove member role: {e}")))?;
+
+        sqlx::query(
+            "DELETE FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
+        )
+        .bind(conversation_id)
+        .bind(user_id)
+        .execute(tx.conn())
+        .await
+        .map_err(|e| RelationError::Store(format!("remove member: {e}")))?;
+
+        Ok(())
+    }
 }

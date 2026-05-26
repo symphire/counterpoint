@@ -33,4 +33,22 @@ pub trait FriendshipRepo: Send + Sync {
         page_size: PageSize,
         after: Option<FriendCursor>,
     ) -> Result<Vec<FriendSummary>, RelationError>;
+    async fn insert_pending(
+        &self,
+        pair: UserPair,
+        requester: UserId,
+    ) -> Result<(), RelationError>;
+    async fn accept_in_tx(
+        &self,
+        tx: &mut dyn StorageTx<'_>,
+        pair: UserPair,
+    ) -> Result<(), RelationError>;
+    async fn reject(&self, pair: UserPair, recipient: UserId) -> Result<(), RelationError>;
+    async fn remove(&self, pair: UserPair) -> Result<(), RelationError>;
+    async fn list_incoming_requests(
+        &self,
+        user_id: UserId,
+        page_size: PageSize,
+        after: Option<FriendRequestCursor>,
+    ) -> Result<Vec<FriendRequestSummary>, RelationError>;
 }

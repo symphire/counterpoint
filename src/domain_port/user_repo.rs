@@ -35,4 +35,13 @@ pub trait UserRepo: Send + Sync {
     async fn username_exists(&self, username: &str) -> Result<bool, AuthError>;
 
     async fn id_exists(&self, user_id: UserId) -> Result<bool, AuthError>;
+
+    async fn get_profile(&self, user_id: UserId) -> Result<UserProfile, AuthError>;
+
+    async fn search_by_prefix(
+        &self,
+        prefix: &str,
+        page_size: PageSize,
+        after: Option<UserCursor>,
+    ) -> Result<Vec<UserProfile>, AuthError>;
 }

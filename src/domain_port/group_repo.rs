@@ -42,4 +42,16 @@ pub trait GroupRepo: Send + Sync {
         page_size: PageSize,
         after: Option<MemberCursor>,
     ) -> Result<Vec<MemberSummary>, RelationError>;
+    async fn update_owner_in_tx(
+        &self,
+        tx: &mut dyn StorageTx<'_>,
+        group_id: GroupId,
+        new_owner_id: UserId,
+    ) -> Result<(), RelationError>;
+    async fn update_group_info(
+        &self,
+        group_id: GroupId,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<(), RelationError>;
 }

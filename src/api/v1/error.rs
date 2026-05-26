@@ -7,6 +7,23 @@ use tracing::warn;
 use warp::http::StatusCode;
 use warp::{Rejection, reject};
 
+impl From<RelationError> for ApiErrorCode {
+    fn from(error: RelationError) -> Self {
+        match error {
+            RelationError::UserNotFound
+            | RelationError::GroupNotFound
+            | RelationError::FriendRequestNotFound
+            | RelationError::InvitationNotFound
+            | RelationError::JoinRequestNotFound => ApiErrorCode::NotFound,
+            RelationError::AlreadyFriends
+            | RelationError::FriendRequestExists
+            | RelationError::AlreadyMember => ApiErrorCode::Conflict,
+            RelationError::NotMember | RelationError::NotOwner => ApiErrorCode::Forbidden,
+            e => ApiErrorCode::internal(e),
+        }
+    }
+}
+
 pub async fn recover_error(err: Rejection) -> Result<impl warp::Reply, Infallible> {
     if let Some(err) = err.find::<ApiErrorCode>() {
         let json = warp::reply::json(&ApiResponse::<()>::err(err.clone(), err.to_string()));
@@ -43,6 +60,12 @@ pub enum ApiErrorCode {
     UsernameTaken,
     #[error("Token is not valid")]
     InvalidToken,
+    #[error("Not found")]
+    NotFound,
+    #[error("Conflict")]
+    Conflict,
+    #[error("Forbidden")]
+    Forbidden,
     #[error("Internal error")]
     InternalError,
 }
@@ -71,6 +94,9 @@ impl From<AuthError> for ApiErrorCode {
     fn from(error: AuthError) -> Self {
         match error {
             AuthError::InvalidCredentials => ApiErrorCode::InvalidCredentials,
+            AuthError::UserExists => ApiErrorCode::UsernameTaken,
+            AuthError::UserNotFound => ApiErrorCode::NotFound,
+            AuthError::TokenInvalid | AuthError::TokenExpired => ApiErrorCode::InvalidToken,
             AuthError::InternalError(e) => ApiErrorCode::internal(e),
             _ => ApiErrorCode::InternalError,
         }

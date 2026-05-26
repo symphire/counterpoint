@@ -294,4 +294,39 @@ LIMIT ?
 
         Ok(out)
     }
+
+    async fn update_owner_in_tx(
+        &self,
+        tx: &mut dyn StorageTx<'_>,
+        group_id: GroupId,
+        new_owner_id: UserId,
+    ) -> Result<(), RelationError> {
+        let tx = downcast(tx);
+
+        sqlx::query("UPDATE chat_group SET owner_id = ? WHERE group_id = ?")
+            .bind(new_owner_id)
+            .bind(group_id)
+            .execute(tx.conn())
+            .await
+            .map_err(|e| RelationError::Store(format!("update owner: {e}")))?;
+
+        Ok(())
+    }
+
+    async fn update_group_info(
+        &self,
+        group_id: GroupId,
+        name: &str,
+        description: Option<&str>,
+    ) -> Result<(), RelationError> {
+        sqlx::query("UPDATE chat_group SET group_name = ?, description = ? WHERE group_id = ?")
+            .bind(name)
+            .bind(description)
+            .bind(group_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RelationError::Store(format!("update group info: {e}")))?;
+
+        Ok(())
+    }
 }
